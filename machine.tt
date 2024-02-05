@@ -1,0 +1,72 @@
+/*****************************************************************************
+ * Implementation of methods for class templates in Normal.hh                *
+ *****************************************************************************/
+
+// Use the system clock for a random seed,
+// as long as MC_REPRODUCE is not set.
+#ifndef MC_REPRODUCE
+#include <chrono>
+#endif // MC_REPRODUCE
+
+// Obtain and save the seed, but do not create the pseudorandom
+// number generator.
+template<typename number, typename engine, typename distribution>
+void machine<number, engine, distribution>::SetSeed() 
+{
+#ifdef MC_REPRODUCE
+    seed = FIXED_SEED;  // See machine.hh. This is usually 0.
+#else
+    // Use the system clock to obtain a seed.
+    auto x = std::chrono::system_clock::now().time_since_epoch().count();
+    seed = static_cast<unsigned>(x);
+#endif // MC_REPRODUCE
+}
+
+// Constructor for use when the chosen distribution
+// takes a single parameter.
+template<typename number, typename engine, typename distribution>
+machine<number, engine, distribution>::machine(number p)
+{
+    SetSeed();
+    generator = new engine(seed);
+    this->rho = new distribution(p);
+}
+
+// Constructor for use when the chosen distribution takes two parameters.
+template<typename number, typename engine, typename distribution>
+machine<number, engine, distribution>::machine(number p, number q)
+{
+    SetSeed();
+    generator = new engine(seed);
+    this->rho = new distribution(p, q);
+}
+
+// Destructor
+template<typename number, typename engine, typename distribution>
+machine<number, engine, distribution>::~machine()
+{
+    delete generator;
+    delete rho;
+}
+
+// Return a pseudorandom number. If switches are set, accumulate
+// a sum and a sum of squares, and save all the random samples.
+template<typename number, typename engine, typename distribution>
+number machine<number, engine, distribution>::operator()()
+{
+    // Obtain a random number
+    number sample;
+    sample = (*rho)(*(this->generator));
+#ifdef MC_ACCUMULATE_RANDOM
+    // Accumulate the random samples and their squares.
+    Sum += sample;
+    SumSquare += sample * sample;
+#endif
+#ifdef MC_SAVE_RANDOM
+    // Save the random number in a std::vector<number> container.
+    history.push_back(sample);
+#endif
+    return sample;
+}
+
+/*****************************************************************************/

@@ -1,0 +1,1012 @@
+/*****************************************************************************
+ * Implementation of methods for class templates in Normal.hh                *
+ *****************************************************************************/
+
+// Ordinarily overloaded constructor definitions would do,
+// but it is safer to use conditional defines so it is not
+// possible ever to use the wrong one.
+
+// Constructor for ordinary, single process execution
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>::pack(size_t s) : sz{s}
+{
+    FullSize = sz;
+    x = new component[sz];
+    localx = x;
+}
+
+
+// Copy constructor
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>::pack(const pack<scalar, sum, component>& v)
+    :   sz{v.sz}
+{
+    MC_DEBUG << "pack<...>::pack(const pack<...>& v)" << std::endl;
+    size_t i;
+    x = new component[sz];
+    localx = x;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = v.x[i];
+}
+
+
+// Dummy move constructor
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>::pack(pack<scalar, sum, component>&& v)
+    :   sz{v.sz}
+{
+    MC_DEBUG << "pack<...>::pack(pack<...>&& v)" << std::endl;
+    size_t i;
+    x = new component[sz];
+    localx = x;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = v.x[i];
+    MC_DEBUG << "pack<...>::pack(pack<...>&& v) done" << std::endl;
+}
+
+
+// Move constructor
+// template<typename scalar, typename sum, typename component>
+// pack<scalar, sum, component>::pack(pack<scalar, sum, component>&& v)
+// {
+// //    :   sz{v.sz}, x{v.x}, localx{v.localx}, window{v.window}
+//     MC_DEBUG << "pack<...>::pack(pack<...>&& v)" << std::endl;
+//     sz = v.sz;
+//     x = v.x;
+//     localx = v.localx;
+//     window = v.window;
+// #ifdef MC_MPI
+//     transfer_parallel_info(v);
+//     if(!only)
+//     {
+//         MC_DEBUG << "at pack<...>::pack(pack<...>&& v) barrier" << std::endl;
+//         MPI_Barrier(*island);
+//         MC_DEBUG << "passed pack<...>::pack(pack<...>&& v) barrier" << std::endl;
+//     }
+//     if(!lead)
+//     {
+//         MPI_Aint check_windowsz;
+//         int check_displacement;
+//         MC_DEBUG << fmt("%20s") % "windowsz: " << fmt("%d") % windowsz << std::endl; 
+//         MC_DEBUG << fmt("%20s") % "displacement: " << fmt("%d") % displacement << std::endl; 
+//         MPI_Win_shared_query(window, 0, &check_windowsz, &check_displacement, &x);
+//         MC_DEBUG << fmt("%20s") % "check_windowsz: " << fmt("%d") % check_windowsz << std::endl; 
+//         MC_DEBUG << fmt("%20s") % "check_displacement: " << fmt("%d") % check_displacement << std::endl; 
+//         BOOST_ASSERT_MSG(windowsz==check_windowsz, "checking window size");
+//         BOOST_ASSERT_MSG(displacement==check_displacement, "checking displacement");
+//     }
+// #endif
+//     v.sz = 0;
+//     v.x = nullptr;
+//     v.localx = nullptr;
+// }
+
+// Destructor
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>::~pack()
+{
+    delete [] x;
+    x = nullptr;
+    localx = nullptr;
+}
+
+/*****************************************************************************/
+
+// Copy assignment
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar, sum, component>::operator=(const pack<scalar, sum, component>& v)
+{
+    MC_DEBUG << "pack<...>& pack<...>::operator=(const pack<...>& v)" << std::endl;
+    // In case of self-assignment
+    if(this==&v)
+        return *this;
+    BOOST_ASSERT_MSG(sz == v.sz, "sz values not equal in copy assignment");
+    if(x == nullptr)
+    {
+        sz = v.sz;
+        x = new component[sz];
+        localx = x;
+    }
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = v.x[i];
+    return *this;
+}
+
+
+// Dummy move assignment
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar, sum, component>::operator=(pack<scalar, sum, component>&& v)
+{
+    MC_DEBUG << "pack<...>& pack<...>::operator=(pack<...>&& v)" << std::endl;
+    // In case of self-assignment
+    if(this==&v)
+        return *this;
+    BOOST_ASSERT_MSG(sz == v.sz, "sz values not equal in copy assignment");
+    if(x == nullptr)
+    {
+        sz = v.sz;
+        x = new component[sz];
+        localx = x;
+    }
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = v.x[i];
+    MC_DEBUG << "pack<...>& pack<...>::operator=(pack<...>&& v) done" << std::endl;
+    return *this;
+}
+
+
+// Move assignment
+// template<typename scalar, typename sum, typename component>
+// pack<scalar, sum, component>& 
+// pack<scalar, sum, component>::operator=(pack<scalar, sum, component>&& v)
+// {
+//     MC_DEBUG << "pack<...>& pack<...>::operator=(pack<...>&& v)" << std::endl;
+//     BOOST_ASSERT_MSG(sz==v.sz, "unequal arrays in move assignment");
+// #ifdef MC_MPI
+//     transfer_parallel_info(v);
+//     if(localx!=nullptr)
+//     {
+//         MPI_Win_fence(0, window);
+//         MPI_Win_free(&window);
+//     }
+//     if(!only)
+//     {
+//         MC_DEBUG << "at pack<...>& pack<...>::operator=(pack<...>&& v) barrier" << std::endl;
+//         MPI_Barrier(*island);
+//         MC_DEBUG << "passed pack<...>& pack<...>::operator=(pack<...>&& v) barrier" << std::endl;
+//     }
+//     window = v.window;
+// #else
+//     if(x != nullptr)
+//     {
+//         delete [] x;
+//         x = nullptr;
+//         localx = nullptr;
+//     }
+// #endif
+//     x = v.x;
+//     localx = v.localx;
+//     v.sz = 0;
+//     v.x = nullptr;
+//     v.localx = nullptr;
+//     return *this;
+// }
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar,
+     sum,
+     component>::operator+=(const pack<scalar, sum, component>& v)
+{
+    MC_DEBUG << "pack<...>& pack<...>::operator+=(const pack<...>& v)" << std::endl;
+    *this = *this + v;
+    MC_DEBUG << "pack<...>& pack<...>::operator+=(const pack<...>& v) done" << std::endl;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar, sum, component>::operator+=(pack<scalar, sum, component>&& v)
+{
+    MC_DEBUG << "pack<...>& pack<...>::operator+=(pack<...>&& v)" << std::endl;
+    *this = *this + v;
+    MC_DEBUG << "pack<...>& pack<...>::operator+=(pack<...>&& v) done" << std::endl;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar,
+     sum,
+     component>::operator-=(const pack<scalar, sum, component>& v)
+{
+    *this = *this - v;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar, sum, component>::operator-=(pack<scalar, sum, component>&& v)
+{
+    *this = *this - v;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar,
+     sum,
+     component>::operator*=(const pack<scalar, sum, component>& v)
+{
+    *this = (*this) * v;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar, sum, component>::operator*=(pack<scalar, sum, component>&& v)
+{
+    *this = (*this) * v;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar,
+     sum,
+     component>::operator/=(const pack<scalar, sum, component>& v)
+{
+    *this = (*this) / v;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>& 
+pack<scalar, sum, component>::operator/=(pack<scalar, sum, component>&& v)
+{
+    *this = (*this) / v;
+    return *this;
+}
+
+/*****************************************************************************/
+
+// Copy assignment
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar, sum, component>::operator=(const scalar& a)
+{
+    BOOST_ASSERT_MSG(x!=nullptr, "cannot scalar assign before length set");
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+            x[i] = a;
+    }
+    return *this;
+}
+
+// Move assignment
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar, sum, component>::operator=(scalar&& a)
+{
+    BOOST_ASSERT_MSG(x!=nullptr, "cannot scalar assign before length set");
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+            x[i] = a;
+    }
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar,
+     sum,
+     component>::operator+=(const scalar& a)
+{
+    *this = *this + a;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar, sum, component>::operator+=(scalar&& a)
+{
+    *this = *this + a;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar,
+     sum,
+     component>::operator-=(const scalar& a)
+{
+    *this = *this - a;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar, sum, component>::operator-=(scalar&& a)
+{
+    *this = *this - a;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar,
+     sum,
+     component>::operator*=(const scalar& a)
+{
+    *this = (*this) * a;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar, sum, component>::operator*=(scalar&& a)
+{
+    *this = (*this) * a;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar,
+     sum,
+     component>::operator/=(const scalar& a)
+{
+    *this = (*this) / a;
+    return *this;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>&
+pack<scalar, sum, component>::operator/=(scalar&& a)
+{
+    *this = (*this) / a;
+    return *this;
+}
+
+/*****************************************************************************/
+
+template<typename scalar, typename sum, typename component>
+component& pack<scalar, sum, component>::operator()(size_t j)
+{
+    if(j > sz)
+        throw std::out_of_range("index too large");
+    else if(j < 0)
+        throw std::out_of_range("index less than zero");
+    else
+        return x[j];
+}
+
+template<typename scalar, typename sum, typename component>
+component& pack<scalar, sum, component>::operator[](size_t j)
+{
+    if(j >= sz)
+        throw std::out_of_range("index too large");
+    else if(j < 0)
+        throw std::out_of_range("index less than zero");
+    else
+        return x[j];
+}
+
+/*****************************************************************************/
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+pack<scalar, sum, component>::operator-() const
+{
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+    {
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        result.x[i] = -x[i];
+    }
+    return result;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+pack<scalar, sum, component>::operator++()
+{
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+    {
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+            result.x[i] = x[i] + static_cast<component>(1.0);
+    }
+    return result;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+pack<scalar, sum, component>::operator--()
+{
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+    {
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+            result.x[i] = x[i] - static_cast<component>(1.0);
+    }
+    return result;
+}
+
+/*****************************************************************************/
+
+// Addition of fields
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+pack<scalar, sum, component>::operator+(const pack<scalar, sum, component>& v)
+const
+{
+    MC_DEBUG << "pack<...> pack<...>::operator+(const pack<...>& v)" << std::endl;
+    BOOST_ASSERT_MSG(sz==v.sz, "unequal arrays in addition");
+    pack<scalar, sum, component> result(v);
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+        {
+            //MC_DEBUG << "pack<...> operator+()" << fmt("%d") % i << std::endl;
+            result.x[i] += x[i]; // + v.x[i];
+        }
+
+    }
+    MC_DEBUG << "pack<...> pack<...>::operator+(const pack<...>& v) done" << std::endl;
+    return result;
+}
+
+// Right add a scalar
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+pack<scalar, sum, component>::operator+(const scalar& a)
+const
+{
+    pack<scalar, sum, component> result(sz);
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+            result.x[i] = x[i] + static_cast<component>(a);
+    }
+    return result;
+}
+
+// Left add a scalar
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+operator+(const scalar& a, const pack<scalar, sum, component>& v)
+{
+    return v + a;
+}
+
+/*****************************************************************************/
+
+// Subtract fields
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+pack<scalar, sum, component>::operator-(const pack<scalar, sum, component>& v)
+const
+{
+    BOOST_ASSERT_MSG(sz==v.sz, "unequal arrays in subtraction");
+    pack<scalar, sum, component> result(sz);
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+            result.x[i] = x[i] - v.x[i];
+    }
+    return result;
+}
+
+// Subtract a scalar
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+pack<scalar, sum, component>::operator-(const scalar& a)
+const
+{
+    pack<scalar, sum, component> result(sz);
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<sz; ++i)
+            result.x[i] = x[i] - static_cast<component>(a);
+    }
+    return result;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+operator-(const scalar& a, const pack<scalar, sum, component>& v)
+{
+    pack<scalar, sum, component> result(v.sz);
+    if(v.lead)
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+        for(i=0; i<v.sz; ++i)
+            result.x[i] = static_cast<component>(a) - v.x[i];
+    }
+    return result;
+}
+
+/*****************************************************************************/
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+pack<scalar, sum, component>::operator*(const pack<scalar, sum, component>& v)
+const
+{
+    if(sz!=v.sz)
+        throw std::domain_error("unequal arrays in addition");
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        result.x[i] = x[i] * v.x[i];
+    return result;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+pack<scalar, sum, component>::operator%(const pack<scalar, sum, component>& v)
+const
+{
+    if(sz!=v.sz)
+        throw std::domain_error("unequal arrays in addition");
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        result.x[i] = x[i] * v.x[i];
+    return result;
+}
+
+// Multiply a scalar
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+pack<scalar, sum, component>::operator*(const scalar& a)
+const
+{
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        result.x[i] = x[i] * static_cast<component>(a);
+    return result;
+}
+
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+operator*(const scalar& a, const pack<scalar, sum, component>& v)
+{
+    return v * a;
+}
+
+/*****************************************************************************/
+
+// Divide fields
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component>
+pack<scalar, sum, component>::operator/(const pack<scalar, sum, component>& v)
+const
+{
+    if(sz!=v.sz)
+        throw std::domain_error("unequal arrays in addition");
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        result.x[i] = x[i] / v.x[i];
+    return result;
+}
+
+// Divide by a scalar
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+pack<scalar, sum, component>::operator/(const scalar& a)
+const
+{
+    size_t i;
+    pack<scalar, sum, component> result(sz);
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        result.x[i] = x[i] / static_cast<component>(a);
+    return result;
+}
+
+// Divide a scalar by a field
+template<typename scalar, typename sum, typename component>
+pack<scalar, sum, component> 
+operator/(const scalar& a, const pack<scalar, sum, component>& v)
+{
+    size_t i;
+    pack<scalar, sum, component> result(v.sz);
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<v.sz; ++i)
+        result.x[i] = static_cast<component>(a) / v.x[i];
+    return result;
+}
+
+/*****************************************************************************/
+
+template<typename scalar, typename sum, typename component>
+void pack<scalar, sum, component>::abs()
+{
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = std::abs(x[i]);
+}
+
+template<typename scalar, typename sum, typename component>
+void pack<scalar, sum, component>::square()
+{
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = x[i] * x[i];
+}
+
+template<typename scalar, typename sum, typename component>
+void pack<scalar, sum, component>::reciprocal()
+{
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = 1/x[i];
+}
+
+template<typename scalar, typename sum, typename component>
+void pack<scalar, sum, component>::power(int m)
+{
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = pow(x[i], m);
+}
+
+template<typename scalar, typename sum, typename component>
+void pack<scalar, sum, component>::exp()
+{
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = std::exp(x[i]);
+}
+
+template<typename scalar, typename sum, typename component>
+void pack<scalar, sum, component>::mayerf(scalar beta)
+{
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = std::exp(-beta*x[i]) - 1.0;
+}
+
+template<typename scalar, typename sum, typename component>
+void pack<scalar, sum, component>::apply(component (*f)(component))
+{
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<sz; ++i)
+        x[i] = f(x[i]);
+}
+
+/*****************************************************************************/
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean(bool all)
+{
+    MC_DEBUG << "pack<...>::local_mean(bool all)" << std::endl;
+    size_t count = 0;
+    sum x_mean = 0.0;
+    BOOST_ASSERT_MSG(!all, "no mpi so only one process");
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for reduction(+ :count, x_mean)
+        for(i=0; i<sz; ++i)
+        {
+            if(std::isfinite(x[i]))
+            {
+                ++count;
+                x_mean += x[i];
+            }
+        }
+
+        if(count>0)
+            x_mean /= count;
+    }
+    MC_DEBUG << "pack<...>::local_mean(bool all) done" << std::endl;
+    return x_mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean()
+{
+    MC_DEBUG << "pack<...>::local_mean()" << std::endl;
+    sum x_mean = 0.0;
+    x_mean = local_mean(false);
+    MC_DEBUG << "pack<...>::local_mean() done" << std::endl;
+    return x_mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::mean()
+{
+    MC_DEBUG << "pack<...>::mean()" << std::endl;
+    sum mean = 0.0;
+    mean = local_mean();
+    MC_DEBUG << "pack<...>::mean() done" << std::endl;
+    return mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean_square(bool all)
+{
+    MC_DEBUG << "pack<...>::local_mean_square(bool all)" << std::endl;
+    size_t count = 0;
+    sum x_mean2 = 0.0;
+    BOOST_ASSERT_MSG(!all, "no mpi so only one process");
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for reduction(+ :count, x_mean2)
+        for(i=0; i<sz; ++i)
+        {
+            if(std::isfinite(x[i]))
+            {
+                ++count;
+                x_mean2 += x[i] * x[i];
+            }
+        }
+
+        if(count>0)
+            x_mean2 /= count;
+    }
+    MC_DEBUG << "pack<...>::local_mean_square(bool all) done" << std::endl;
+    return x_mean2;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean_square()
+{
+    MC_DEBUG << "pack<...>::local_mean_square()" << std::endl;
+    sum x_mean2 = 0.0;
+    x_mean2 = local_mean_square(false);
+    MC_DEBUG << "pack<...>::local_mean_square() done" << std::endl;
+    return x_mean2;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::mean_square()
+{
+    MC_DEBUG << "pack<...>::mean_square()" << std::endl;
+    sum mean2 = 0.0;
+    mean2 = local_mean_square();
+    MC_DEBUG << "pack<...>::mean_square() done" << std::endl;
+    return mean2;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_rms(bool all)
+{
+    MC_DEBUG << "pack<...>::local_rms(bool)" << std::endl;
+    return sqrt(this->local_mean_square(all));
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_rms()
+{
+    MC_DEBUG << "pack<...>::local_rms()" << std::endl;
+    return sqrt(this->local_mean_square());
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::rms()
+{
+    MC_DEBUG << "pack<...>::rms()" << std::endl;
+    return sqrt(this->mean_square());
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean_abs(bool all)
+{
+    MC_DEBUG << "pack<...>::local_mean_abs(bool all)" << std::endl;
+    size_t count = 0;
+    sum x_mean = 0.0;
+    BOOST_ASSERT_MSG(!all, "no mpi so only one process");
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for reduction(+ :count, x_mean)
+        for(i=0; i<sz; ++i)
+        {
+            if(std::isfinite(x[i]))
+            {
+                ++count;
+                x_mean += fabs(x[i]);
+            }
+        }
+
+        if(count>0)
+            x_mean /= count;
+    }
+    MC_DEBUG << "pack<...>::local_mean_abs(bool all) done" << std::endl;
+    return x_mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean_abs()
+{
+    MC_DEBUG << "pack<...>::local_mean_abs()" << std::endl;
+    sum x_mean = 0.0;
+    x_mean = local_mean_abs(false);
+    MC_DEBUG << "pack<...>::local_mean_abs() done" << std::endl;
+    return x_mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::mean_abs()
+{
+    MC_DEBUG << "pack<...>::mean_abs()" << std::endl;
+    sum mean = 0.0;
+    mean = local_mean_abs();
+    MC_DEBUG << "pack<...>::mean_abs() done" << std::endl;
+    return mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean_apply(bool all, component (*f)(component))
+{
+    MC_DEBUG << "pack<...>::local_mean_apply(bool all)" << std::endl;
+    size_t count = 0;
+    sum x_mean = 0.0;
+    BOOST_ASSERT_MSG(!all, "no mpi so only one process");
+    {
+        size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for reduction(+ :count, x_mean)
+        for(i=0; i<sz; ++i)
+        {
+            if(std::isfinite(x[i]))
+            {
+                ++count;
+                x_mean += f(x[i]);
+            }
+        }
+
+        if(count>0)
+            x_mean /= count;
+    }
+    MC_DEBUG << "pack<...>::local_mean_apply(bool all) done" << std::endl;
+    return x_mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::local_mean_apply(component (*f)(component))
+{
+    MC_DEBUG << "pack<...>::local_mean_apply()" << std::endl;
+    sum x_mean = 0.0;
+    x_mean = local_mean(false, f);
+    MC_DEBUG << "pack<...>::local_mean_apply() done" << std::endl;
+    return x_mean;
+}
+
+template<typename scalar, typename sum, typename component>
+sum pack<scalar, sum, component>::mean_apply(component (*f)(component))
+{
+    MC_DEBUG << "pack<...>::mean_apply()" << std::endl;
+    sum x_mean = 0.0;
+    sum mean = 0.0;
+    mean = local_mean_apply(f);
+    MC_DEBUG << "pack<...>::mean_apply() done" << std::endl;
+    return mean;
+}
+
+template<typename scalar, typename sum, typename component>
+std::vector<sum> pack<scalar, sum, component>::moments(int m)
+{
+    std::vector<sum> result;
+    size_t count = 0;
+    sum xmoment = 0.0;
+    int k;
+    size_t i;
+    for(k=0; k<=m; ++k)
+    {
+        count = 0;
+        xmoment = 0.0;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for reduction(+ :count, xmoment)
+        for(i=0; i<sz; ++i)
+            if(std::isfinite(x[i]))      //if(x[i]==x[i])
+            {
+                ++count;
+                xmoment += pow(x[i], k);
+            }
+        if(count>0)
+            xmoment /= count;
+        result.push_back(xmoment);
+    }
+    return result;
+}
+
+/*****************************************************************************/
+
+// Move assignment
+template<typename scalar,
+         typename sum,
+         typename component,
+         typename engine,
+         typename distribution>
+random_pack<scalar, sum, component, engine, distribution>& 
+random_pack<scalar,
+            sum,
+            component,
+            engine,
+            distribution>::operator=(pack<scalar, sum, component>&& v)
+{
+    if(this->x!=nullptr)
+    {
+        delete [] this->x;
+        this->x = nullptr;
+    }
+    this->sz = v.sz;
+    this->x = v.x;
+    v.sz = 0;
+    v.x = nullptr;
+    return *this;
+}
+
+// Move assignment
+template<typename scalar,
+         typename sum,
+         typename component,
+         typename engine,
+         typename distribution>
+random_pack<scalar, sum, component, engine, distribution>& 
+random_pack<scalar,
+            sum,
+            component,
+            engine,
+            distribution>::operator=(scalar&& a)
+{
+    // std::cout << "move assign scalar" << std::endl;
+    if(this->x == nullptr)
+        throw std::length_error("cannot scalar assign before length set");
+    size_t i;
+#pragma omp parallel default(shared) private(i)
+#pragma omp for
+    for(i=0; i<this->sz; ++i)
+    {
+        this->x[i] = a;
+    }
+    return *this;
+}
+
+/*****************************************************************************/
