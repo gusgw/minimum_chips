@@ -1,3 +1,15 @@
+# Checks e.g. by valgrind
+*check
+
+# Saved output streams
+*.out
+*.err
+
+# Coverage and profiling
+*.gcno
+*.gcda
+coverage/
+
 # Prerequisites
 *.d
 
@@ -27,6 +39,5 @@
 *.lib
 
 # Executables
+*.x
 *.exe
-*.out
-*.app
