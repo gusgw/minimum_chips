@@ -41,6 +41,15 @@ interactions of increasing complexity written as graphs. In 2023 the
 Royal Society of Chemistry invited me to review this work for their main
 chemical physics journal.
 
+### The dynamic surface tension of water
+
+The surface tension of water takes about one thousandth of a second
+after a fresh surface is made to reach its normal value. We explained
+this change in terms of the changing composition of a surface layer.
+This dynamic surface tension is critical in inkjet technologies, and our
+discoveries on the composition of the surface of a water droplet is
+important in atmospheric chemistry.
+
 ![hydroxide](oh_coordination.png)
 
 ### Hypervirials and diagrammatic expansions
