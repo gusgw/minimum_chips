@@ -19,6 +19,9 @@ format:
     fontsize: 10pt
     include-in-header: "header.tex"
     include-before-body: "start.tex"
+    documentclass: revtex4-2
+    classoptions:
+      - preprint
   gfm:
     preview-mode: raw
 ---

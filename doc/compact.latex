@@ -5,7 +5,7 @@ $if(colorlinks)$
 $endif$
 \documentclass[$if(fontsize)$$fontsize$,$endif$$if(lang)$$babel-lang$,$endif$$if(papersize)$$papersize$paper,$endif$$if(beamer)$ignorenonframetext,$if(handout)$handout,$endif$$if(aspectratio)$aspectratio=$aspectratio$,$endif$$endif$$for(classoption)$$classoption$$sep$$endfor$]{$documentclass$}
 \usepackage{fontspec}
-\usepackage{sectsty}
+%\usepackage{sectsty}
 \usepackage{eurosym}
 \usepackage{tabularx, booktabs}
 $if(fontfamily)$
@@ -117,9 +117,9 @@ $endif$
 $if(highlighting-macros)$
 $highlighting-macros$
 $endif$
-$if(tables)$
-\usepackage{longtable,booktabs}
-$endif$
+%$if(tables)$
+%\usepackage{longtable,booktabs}
+%$endif$
 $if(graphics)$
 \usepackage{graphicx,grffile}
 \makeatletter
@@ -200,23 +200,23 @@ $endfor$
 $endif$
 
 %\setromanfont [Ligatures={Common}, Numbers={OldStyle}, Variant=01]{Linux Libertine}
-\sectionfont{\upshape\Large}
-\subsectionfont{\mdseries\scshape\large}
-\subsubsectionfont{\mdseries\upshape\large}
+%\sectionfont{\upshape\Large}
+%\subsectionfont{\mdseries\scshape\large}
+%\subsubsectionfont{\mdseries\upshape\large}
 %\chardef\&=``E050
 
 
 \begin{document}
 $if(title)$
-{\LARGE $title$}\\[0.1cm]
+{\LARGE $title$}
 $endif$
 
 $if(subtitle)$
-{\Large $subtitle$}\\[0.1cm]
+{\Large $subtitle$}
 $endif$
 
 $if(author)$
-{\large $author$}\\[0.1cm]
+{\large $author$}
 $endif$
 %\hrule
 
@@ -225,7 +225,7 @@ $if(blurb)$
 $endif$
 
 $if(date)$
-$date$\\[0.1cm]
+$date$
 $endif$
 
 $if(web)$
