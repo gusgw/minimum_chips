@@ -1,8 +1,31 @@
-# Minimum Chips
+---
+title: "Minimum Chips"
+subtitle: "Parallel algorithms for the structures of fluids"
+author: "Angus Gray-Weale"
+date: today
+toc: false
+number-sections: false
+colorlinks: true
+tbl-cap-location: bottom
+format:
+  pdf:
+    template: "compact.latex"
+    geometry:
+      - top=10mm
+      - bottom=10mm
+      - left=10mm
+      - right=10mm
+    papersize: a4
+    fontsize: 10pt
+    include-in-header: "header.tex"
+    include-before-body: "start.tex"
+  gfm:
+    preview-mode: raw
+---
 
 [How many chips is the minimum?](https://www.abc.net.au/news/2019-12-21/minimum-chips-size-debate-brandon-gatgens/11772776)
 
-<img src="chips.png" width="700" />
+![Some chips](chips.png)
 
 Minimum chips implements mathematical operations
 on a large array for use with high performance
@@ -23,8 +46,8 @@ of particles with internal structure is ideal
 for GPGPU acceleration. CUDA is used for this
 step.
 
-<img src="betaMAPbI3.png" width="300" />
+![photovoltaic](betaMAPbI3.png)
 
-<img src="silica.png" width="300" />
+![silica](silica.png)
 
-<img src="oh_coordination.png" width="300" />
+![hydroxide](oh_coordination.png)
