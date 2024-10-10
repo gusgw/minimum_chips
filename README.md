@@ -1,6 +1,13 @@
 # Minimum Chips
 Angus Gray-Weale
-2024-10-04
+2024-10-10
+
+*This repository is a work in progress. It has been through limited
+testing, and requires clearer control of its settings. Further
+development, including versions that use message passing and GPU
+acceleration, is in a private repository. [Email me if you’d like access
+or information about projects and publications that use this
+code.](mailto:github.com.h3com@passmail.net)*
 
 Minimum chips implements mathematical operations on a large array for
 use with high-performance computing systems. The array is split into
